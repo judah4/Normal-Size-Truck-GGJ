@@ -1,4 +1,4 @@
-use avian3d::{math::*, prelude::*};
+use avian3d::{math::*, parry::na::clamp, prelude::*};
 use bevy::{ecs::query::Has, prelude::*};
 
 pub struct CharacterControllerPlugin;
@@ -9,6 +9,7 @@ impl Plugin for CharacterControllerPlugin {
             .add_systems(
                 Update,
                 (
+                    apply_angular_damping,
                     keyboard_input,
                     gamepad_input,
                     update_grounded,
@@ -49,6 +50,10 @@ pub struct Grounded;
 #[derive(Component)]
 pub struct MovementAcceleration(Scalar);
 
+/// The acceleration used for character rotation.
+#[derive(Component)]
+pub struct RotationAcceleration(Scalar);
+
 /// The damping factor used for slowing down movement.
 #[derive(Component)]
 pub struct MovementDampingFactor(Scalar);
@@ -83,6 +88,7 @@ pub struct CharacterControllerBundle {
 #[derive(Bundle)]
 pub struct MovementBundle {
     acceleration: MovementAcceleration,
+    rotation_acceleration: RotationAcceleration,
     damping: MovementDampingFactor,
     jump_impulse: JumpImpulse,
     max_slope_angle: MaxSlopeAngle,
@@ -91,12 +97,14 @@ pub struct MovementBundle {
 impl MovementBundle {
     pub const fn new(
         acceleration: Scalar,
+        rotation_acceleration: Scalar,
         damping: Scalar,
         jump_impulse: Scalar,
         max_slope_angle: Scalar,
     ) -> Self {
         Self {
             acceleration: MovementAcceleration(acceleration),
+            rotation_acceleration: RotationAcceleration(rotation_acceleration),
             damping: MovementDampingFactor(damping),
             jump_impulse: JumpImpulse(jump_impulse),
             max_slope_angle: MaxSlopeAngle(max_slope_angle),
@@ -106,7 +114,7 @@ impl MovementBundle {
 
 impl Default for MovementBundle {
     fn default() -> Self {
-        Self::new(30.0, 0.9, 7.0, PI * 0.45)
+        Self::new(30.0, PI * 0.5, 0.9, 7.0, PI * 0.45)
     }
 }
 
@@ -135,11 +143,18 @@ impl CharacterControllerBundle {
     pub fn with_movement(
         mut self,
         acceleration: Scalar,
+        rotation_acceleration: Scalar,
         damping: Scalar,
         jump_impulse: Scalar,
         max_slope_angle: Scalar,
     ) -> Self {
-        self.movement = MovementBundle::new(acceleration, damping, jump_impulse, max_slope_angle);
+        self.movement = MovementBundle::new(
+            acceleration,
+            rotation_acceleration,
+            damping,
+            jump_impulse,
+            max_slope_angle,
+        );
         self
     }
 }
@@ -221,9 +236,11 @@ fn movement(
     mut movement_event_reader: EventReader<MovementAction>,
     mut controllers: Query<(
         &MovementAcceleration,
+        &RotationAcceleration,
         &JumpImpulse,
         &mut LinearVelocity,
         &mut AngularVelocity,
+        &Transform,
         Has<Grounded>,
     )>,
 ) {
@@ -234,17 +251,28 @@ fn movement(
     for event in movement_event_reader.read() {
         for (
             movement_acceleration,
+            rotation_acceleration,
             jump_impulse,
             mut linear_velocity,
             mut angular_velocity,
+            transform,
             is_grounded,
         ) in &mut controllers
         {
             match event {
                 MovementAction::Move(direction) => {
-                    linear_velocity.x += direction.x * movement_acceleration.0 * delta_time;
-                    linear_velocity.z -= direction.y * movement_acceleration.0 * delta_time;
-                    //angular_velocity.y -= direction.x * movement_acceleration.0 * delta_time;
+                    let mut fixed_forward = transform.forward().as_vec3();
+                    fixed_forward.y = 0.0;
+                    let normalized_forward = fixed_forward.normalize();
+                    let movement = normalized_forward * direction.y * movement_acceleration.0;
+                    let updated_velocity = movement * delta_time;
+
+                    linear_velocity.x += updated_velocity.x;
+                    linear_velocity.z += updated_velocity.z;
+
+                    // Don't allow turning without movement
+                    let new_angular = angular_y_velocity(&linear_velocity, direction.x);
+                    angular_velocity.y = new_angular * rotation_acceleration.0;
                 }
                 MovementAction::Jump => {
                     if is_grounded {
@@ -254,6 +282,12 @@ fn movement(
             }
         }
     }
+}
+
+fn angular_y_velocity(linear_velocity: &LinearVelocity, input: f32) -> f32 {
+    let abs_forward_movement = linear_velocity.xz().normalize().length();
+    let clamped_turn = -clamp(input, -abs_forward_movement, abs_forward_movement);
+    clamped_turn
 }
 
 /// Applies [`ControllerGravity`] to character controllers.
@@ -276,6 +310,14 @@ fn apply_movement_damping(mut query: Query<(&MovementDampingFactor, &mut LinearV
         // We could use `LinearDamping`, but we don't want to dampen movement along the Y axis
         linear_velocity.x *= damping_factor.0;
         linear_velocity.z *= damping_factor.0;
+    }
+}
+
+fn apply_angular_damping(mut query: Query<&mut AngularVelocity, With<RotationAcceleration>>) {
+    for mut angular_velocity in &mut query {
+        // Zero out the angular velocity
+        angular_velocity.x = 0.;
+        angular_velocity.z = 0.;
     }
 }
 

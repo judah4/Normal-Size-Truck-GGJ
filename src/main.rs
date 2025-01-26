@@ -1,9 +1,6 @@
 use avian3d::prelude::*;
 use bevy::{
-    prelude::*,
-    render::{settings::WgpuSettings, RenderPlugin},
-    window::PresentMode,
-    winit::WinitSettings,
+    log::LogPlugin, prelude::*, render::{settings::WgpuSettings, RenderPlugin}, window::PresentMode, winit::WinitSettings
 };
 use camera::TruckCameraPlugin;
 use characters::CharacterControllerPlugin;
@@ -21,7 +18,6 @@ fn main() {
         .insert_resource(WinitSettings::game())
         .add_plugins((
             DefaultPlugins
-                .set(RenderPlugin::default())
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: "Normal Size Truck".to_string(),
@@ -43,6 +39,11 @@ fn main() {
                             ..default()
                         },
                     ),
+                    ..default()
+                })
+                .set(LogPlugin {
+                    filter: "info,wgpu_core=warn,wgpu_hal=warn,normal_size_truck=debug".into(),
+                    level: bevy::log::Level::DEBUG,
                     ..default()
                 }),
             PhysicsPlugins::default(),

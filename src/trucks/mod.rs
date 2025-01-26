@@ -31,7 +31,7 @@ pub fn spawn_player(
             Player {},
             Vehicle {},
             CharacterControllerBundle::new(Collider::capsule(0.4, 1.0), Vector::NEG_Y * 9.81 * 2.0)
-                .with_movement(50.0, 0.92, 7.0, (50.0 as Scalar).to_radians()),
+                .with_movement(70.0, PI, 0.92, 7.0, (50.0 as Scalar).to_radians()),
         ))
         .with_children(|parent| {
             // child cube
@@ -59,15 +59,17 @@ pub fn update_camera_target(
     let player_transform = single_player.unwrap();
 
     for mut pan_orbit in &mut pan_orbits {
-        pan_orbit.center = player_transform.translation;
+        pan_orbit.center = player_transform.translation + Vec3{x: 0.0, y: 2.0, z: 0.0};
 
-        let half_life = half_life_from_precision(PI, 0.01);
+        let half_life = half_life_from_precision(1.0, 0.1);
+        let player_rotation = player_transform.rotation.to_euler(EulerRot::XYZ).1;
         let lerp = lerp_smooth(
             pan_orbit.yaw,
-            player_transform.rotation.to_euler(EulerRot::XYZ).1,
+            player_rotation,
             time.delta_secs(),
             half_life,
         );
+        debug!(lerp, player_rotation);
         pan_orbit.yaw = lerp;
     }
 }
