@@ -1,6 +1,6 @@
-use std::f32::consts::PI;
-
+use avian3d::prelude::*;
 use bevy::prelude::*;
+use std::f32::consts::PI;
 
 pub fn load_world(mut commands: Commands, server: Res<AssetServer>) {
     commands.spawn((
@@ -13,8 +13,22 @@ pub fn load_world(mut commands: Commands, server: Res<AssetServer>) {
         },
     ));
 
+    commands.spawn((
+        Transform::from_translation(Vec3{x: 0.0, y: -0.5, z: 0.0}),
+        RigidBody::Static,
+        Collider::cuboid(4000.0, 1.0, 4000.0)
+    ));
+
     load_truck(&mut commands, &server, Vec3::ZERO, 0.0);
-    load_person(&mut commands, &server, Vec3{x: 5.0, y: 0.0, z: -1.0});
+    load_person(
+        &mut commands,
+        &server,
+        Vec3 {
+            x: 5.0,
+            y: 0.0,
+            z: -1.0,
+        },
+    );
     load_default_cube(&mut commands, &server);
 
     let mut index = 0;
@@ -68,11 +82,7 @@ fn load_default_cube(commands: &mut Commands, server: &Res<AssetServer>) {
     commands.spawn(SceneRoot(my_scene));
 }
 
-fn load_person(
-    commands: &mut Commands,
-    server: &Res<AssetServer>,
-    translation: Vec3,
-) {
+fn load_person(commands: &mut Commands, server: &Res<AssetServer>, translation: Vec3) {
     // spawn a whole scene
     let my_scene: Handle<Scene> = server.load("models/placeholder/person.glb#Scene0");
     commands.spawn((
@@ -92,7 +102,14 @@ fn load_house(
     commands.spawn((
         Transform::from_translation(translation).with_rotation(Quat::from_rotation_y(rotation)),
         SceneRoot(my_scene),
-    ));
+    )).with_children(|parent| {
+        // child cube
+        parent.spawn((
+            Transform::from_translation(Vec3{x: 0.0, y: 5.0, z: 0.0}),
+            RigidBody::Static,
+            Collider::cuboid(10.0, 10.0, 10.0)
+        ));
+    });
 }
 
 fn load_truck(
@@ -106,7 +123,14 @@ fn load_truck(
     commands.spawn((
         Transform::from_translation(translation).with_rotation(Quat::from_rotation_y(rotation)),
         SceneRoot(my_scene),
-    ));
+    )).with_children(|parent| {
+        // child cube
+        parent.spawn((
+            Transform::from_translation(Vec3{x: 0.0, y: 2.0, z: 0.0}),
+            RigidBody::Dynamic,
+            Collider::cuboid(6.0, 4.0, 10.0)
+        ));
+    });
 }
 
 fn load_plane_grass(commands: &mut Commands, server: &Res<AssetServer>, translation: Vec3) {

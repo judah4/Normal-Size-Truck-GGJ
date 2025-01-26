@@ -1,5 +1,10 @@
-
-use bevy::{prelude::*, render::{settings::WgpuSettings, RenderPlugin}, window::PresentMode, winit::WinitSettings};
+use avian3d::prelude::*;
+use bevy::{
+    prelude::*,
+    render::{settings::WgpuSettings, RenderPlugin},
+    window::PresentMode,
+    winit::WinitSettings,
+};
 use camera::TruckCameraPlugin;
 use spawning::load_world;
 
@@ -37,10 +42,15 @@ fn main() {
                     ),
                     ..default()
                 }),
+            PhysicsPlugins::default(),
         ))
-    
-    // Add game systems
-    .add_plugins(TruckCameraPlugin)
-    .add_systems(Startup, load_world)
+
+        // Debug systems
+        // Enables debug rendering
+        .add_plugins(PhysicsDebugPlugin::default())
+
+        // Add game systems
+        .add_plugins(TruckCameraPlugin)
+        .add_systems(Startup, load_world)
         .run();
 }
