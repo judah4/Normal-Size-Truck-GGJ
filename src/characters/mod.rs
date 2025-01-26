@@ -223,6 +223,7 @@ fn movement(
         &MovementAcceleration,
         &JumpImpulse,
         &mut LinearVelocity,
+        &mut AngularVelocity,
         Has<Grounded>,
     )>,
 ) {
@@ -231,13 +232,19 @@ fn movement(
     let delta_time = time.delta_secs_f64().adjust_precision();
 
     for event in movement_event_reader.read() {
-        for (movement_acceleration, jump_impulse, mut linear_velocity, is_grounded) in
-            &mut controllers
+        for (
+            movement_acceleration,
+            jump_impulse,
+            mut linear_velocity,
+            mut angular_velocity,
+            is_grounded,
+        ) in &mut controllers
         {
             match event {
                 MovementAction::Move(direction) => {
                     linear_velocity.x += direction.x * movement_acceleration.0 * delta_time;
                     linear_velocity.z -= direction.y * movement_acceleration.0 * delta_time;
+                    //angular_velocity.y -= direction.x * movement_acceleration.0 * delta_time;
                 }
                 MovementAction::Jump => {
                     if is_grounded {
