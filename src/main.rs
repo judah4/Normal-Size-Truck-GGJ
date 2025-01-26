@@ -1,5 +1,11 @@
 
 use bevy::{prelude::*, render::{settings::WgpuSettings, RenderPlugin}, window::PresentMode, winit::WinitSettings};
+use camera::TruckCameraPlugin;
+use spawning::load_world;
+
+mod camera;
+mod spawning;
+mod trucks;
 
 fn main() {
     App::new()
@@ -32,6 +38,9 @@ fn main() {
                     ..default()
                 }),
         ))
-        // add the app state type
+    
+    // Add game systems
+    .add_plugins(TruckCameraPlugin)
+    .add_systems(Startup, load_world)
         .run();
 }
