@@ -260,7 +260,8 @@ fn pan_orbit_camera(
                 Quat::from_euler(EulerRot::YXZ, state.yaw, state.pitch, 0.0);
             // To position the camera, get the backward direction vector
             // and place the camera at the desired radius from the center.
-            transform.translation = state.center + transform.back() * state.radius;
         }
+
+        transform.translation = state.center + transform.back() * state.radius;
     }
 }

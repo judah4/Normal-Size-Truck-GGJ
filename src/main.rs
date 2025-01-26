@@ -6,9 +6,12 @@ use bevy::{
     winit::WinitSettings,
 };
 use camera::TruckCameraPlugin;
+use characters::CharacterControllerPlugin;
 use spawning::load_world;
+use trucks::{spawn_player, TruckPlugin};
 
 mod camera;
+mod characters;
 mod spawning;
 mod trucks;
 
@@ -44,13 +47,15 @@ fn main() {
                 }),
             PhysicsPlugins::default(),
         ))
-
         // Debug systems
         // Enables debug rendering
         .add_plugins(PhysicsDebugPlugin::default())
-
         // Add game systems
-        .add_plugins(TruckCameraPlugin)
-        .add_systems(Startup, load_world)
+        .add_plugins((TruckCameraPlugin, CharacterControllerPlugin, TruckPlugin))
+        .add_systems(Startup, (load_world, start_game))
         .run();
+}
+
+fn start_game(mut commands: Commands, server: Res<AssetServer>) {
+    spawn_player(&mut commands, &server, Vec3::ZERO, 0.0);
 }
