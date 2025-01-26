@@ -37,14 +37,10 @@ pub struct PanOrbitState {
 /// The configuration of the pan-orbit controller
 #[derive(Component)]
 pub struct PanOrbitSettings {
-    /// World units per pixel of mouse motion
-    pub pan_sensitivity: f32,
     /// Radians per pixel of mouse motion
     pub orbit_sensitivity: f32,
     /// Exponent per pixel of mouse motion
     pub zoom_sensitivity: f32,
-    /// Key to hold for panning
-    pub pan_key: Option<KeyCode>,
     /// Key to hold for orbiting
     pub orbit_key: Option<KeyCode>,
     /// Key to hold for zooming
@@ -61,7 +57,6 @@ pub struct PanOrbitSettings {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PanOrbitAction {
-    Pan,
     Orbit,
     Zoom,
 }
@@ -81,10 +76,8 @@ impl Default for PanOrbitState {
 impl Default for PanOrbitSettings {
     fn default() -> Self {
         PanOrbitSettings {
-            pan_sensitivity: 0.001, // 1000 pixels per world unit
             orbit_sensitivity: 0.1f32.to_radians(), // 0.1 degree per pixel
             zoom_sensitivity: 0.01,
-            pan_key: Some(KeyCode::ControlLeft),
             orbit_key: Some(KeyCode::AltLeft),
             zoom_key: Some(KeyCode::ShiftLeft),
             scroll_action: Some(PanOrbitAction::Zoom),
@@ -145,23 +138,6 @@ fn pan_orbit_camera(
         // Accumulate values from motion and scroll,
         // based on our configuration settings.
 
-        let mut total_pan = Vec2::ZERO;
-        if settings.pan_key.map(|key| kbd.pressed(key)).unwrap_or(false) {
-
-            if settings.invert_vertical {
-                // Invert the y
-                total_motion.y = -total_motion.y;
-            }
-
-            total_pan -= total_motion * settings.pan_sensitivity;
-        }
-        if settings.scroll_action == Some(PanOrbitAction::Pan) {
-            total_pan -= total_scroll_lines
-                * settings.scroll_line_sensitivity * settings.pan_sensitivity;
-            total_pan -= total_scroll_pixels
-                * settings.scroll_pixel_sensitivity * settings.pan_sensitivity;
-        }
-
         let mut total_orbit = Vec2::ZERO;
         if settings.orbit_key.map(|key| kbd.pressed(key)).unwrap_or(false) {
 
@@ -203,11 +179,8 @@ fn pan_orbit_camera(
 
         // Now we can actually do the things!
 
-        let mut any = false;
-
         // To ZOOM, we need to multiply our radius.
         if total_zoom != Vec2::ZERO {
-            any = true;
             // in order for zoom to feel intuitive,
             // everything needs to be exponential
             // (done via multiplication)
@@ -221,7 +194,6 @@ fn pan_orbit_camera(
 
         // To ORBIT, we change our pitch and yaw values
         if total_orbit != Vec2::ZERO {
-            any = true;
             state.yaw += total_orbit.x;
             state.pitch += total_orbit.y;
             // wrap around, to stay between +- 180 degrees
@@ -239,29 +211,12 @@ fn pan_orbit_camera(
             }
         }
 
-        // To PAN, we can get the UP and RIGHT direction
-        // vectors from the camera's transform, and use
-        // them to move the center point. Multiply by the
-        // radius to make the pan adapt to the current zoom.
-        if total_pan != Vec2::ZERO {
-            any = true;
-            let radius = state.radius;
-            state.center += transform.right() * total_pan.x * radius;
-            state.center += transform.up() * total_pan.y * radius;
-        }
-
         // Finally, compute the new camera transform.
-        // (if we changed anything, or if the pan-orbit
-        // controller was just added and thus we are running
-        // for the first time and need to initialize)
-        if any || state.is_added() {
-            // YXZ Euler Rotation performs yaw/pitch/roll.
-            transform.rotation =
-                Quat::from_euler(EulerRot::YXZ, state.yaw, state.pitch, 0.0);
-            // To position the camera, get the backward direction vector
-            // and place the camera at the desired radius from the center.
-        }
-
+        // YXZ Euler Rotation performs yaw/pitch/roll.
+        transform.rotation =
+            Quat::from_euler(EulerRot::YXZ, state.yaw, state.pitch, 0.0);
+        // To position the camera, get the backward direction vector
+        // and place the camera at the desired radius from the center.
         transform.translation = state.center + transform.back() * state.radius;
     }
 }

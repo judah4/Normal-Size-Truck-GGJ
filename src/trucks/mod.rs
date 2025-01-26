@@ -47,6 +47,7 @@ pub fn spawn_player(
 }
 
 pub fn update_camera_target(
+    time: Res<Time>,
     players: Query<&Transform, With<Player>>,
     mut pan_orbits: Query<&mut PanOrbitState>,
 ) {
@@ -59,5 +60,36 @@ pub fn update_camera_target(
 
     for mut pan_orbit in &mut pan_orbits {
         pan_orbit.center = player_transform.translation;
+
+        let half_life = half_life_from_precision(PI, 0.01);
+        let lerp = lerp_smooth(
+            pan_orbit.yaw,
+            player_transform.rotation.to_euler(EulerRot::XYZ).1,
+            time.delta_secs(),
+            half_life,
+        );
+        pan_orbit.yaw = lerp;
     }
+}
+
+/// Freya's notes listing equations to do framerate independent lerp-smoothing.
+/// The main formula is given by B+(A minus B) times 2 to the power of negative delta time divided by the half-life  
+/// https://mastodon.social/@acegikmo/111931613710775864  
+pub fn lerp_smooth(a: f32, b: f32, dt: f32, half_life: f32) -> f32 {
+    let lerp = b + (a - b) * f32::exp2(-dt / half_life);
+    lerp
+}
+
+/// Calculating half-life given a duration until precision.
+///
+/// # Examples
+///
+/// ```
+/// use crate::trucks::half_life_from_precision;
+///
+/// assert_eq!(half_life_from_precision(1.0, 0.01), 0.150515);
+/// ```
+pub fn half_life_from_precision(duration: f32, precision: f32) -> f32 {
+    let half_life = -duration / f32::log2(precision);
+    half_life
 }
