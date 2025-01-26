@@ -100,7 +100,7 @@ fn spawn_camera(mut commands: Commands) {
     // Position our camera using our component,
     // not Transform (it would get overwritten)
     camera.state.center = Vec3::new(0.0, 2.0, 0.0);
-    camera.state.radius = 10.0;
+    camera.state.radius = 15.0;
     camera.state.pitch = -15.0f32.to_radians();
     camera.state.yaw = 30.0f32.to_radians();
     commands.spawn(camera);
