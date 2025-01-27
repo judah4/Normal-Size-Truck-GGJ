@@ -285,7 +285,7 @@ fn movement(
 }
 
 fn angular_y_velocity(linear_velocity: &LinearVelocity, input: f32) -> f32 {
-    let abs_forward_movement = linear_velocity.xz().normalize().length();
+    let abs_forward_movement = linear_velocity.xz().clamp_length(0.0, 1.0).length();
     let clamped_turn = -clamp(input, -abs_forward_movement, abs_forward_movement);
     clamped_turn
 }
@@ -316,8 +316,7 @@ fn apply_movement_damping(mut query: Query<(&MovementDampingFactor, &mut LinearV
 fn apply_angular_damping(mut query: Query<&mut AngularVelocity, With<RotationAcceleration>>) {
     for mut angular_velocity in &mut query {
         // Zero out the angular velocity
-        angular_velocity.x = 0.;
-        angular_velocity.z = 0.;
+        angular_velocity.y = 0.;
     }
 }
 

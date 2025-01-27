@@ -62,15 +62,16 @@ pub fn update_camera_target(
         pan_orbit.center = player_transform.translation + Vec3{x: 0.0, y: 2.0, z: 0.0};
 
         let half_life = half_life_from_precision(1.0, 0.1);
-        let player_rotation = player_transform.rotation.to_euler(EulerRot::XYZ).1;
-        let lerp = lerp_smooth(
-            pan_orbit.yaw,
-            player_rotation,
-            time.delta_secs(),
-            half_life,
-        );
-        debug!(lerp, player_rotation);
-        pan_orbit.yaw = lerp;
+        let player_rotation = player_transform.rotation.to_axis_angle();
+        let axis_angle = player_rotation.0.y * player_rotation.1;
+        //let lerp = lerp_smooth(
+        //    pan_orbit.yaw,
+        //    axis_angle,
+        //    time.delta_secs(),
+        //    half_life,
+        //);
+        //debug!("axis:{}, {}, yaw:{}", player_rotation.0, axis_angle, pan_orbit.yaw);
+        pan_orbit.yaw = axis_angle;
     }
 }
 
